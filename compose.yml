@@ -1,0 +1,52 @@
+services:
+  grafana:
+    image: grafana/grafana:10.1.1
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    ports:
+      - '9090:9090'
+    volumes:
+      - prometheus-data:/prometheus-data
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
+
+  nodeexporter:
+    image: quay.io/prometheus/node-exporter:latest
+    command:
+      - '--path.rootfs=/host'
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+    networks:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"   # tempo
+      - "4317:4317"  # otlp grpc
+      - "4318:4318"  # otlp http
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+
+volumes:
+  grafana-storage:
+  prometheus-data:
+  tempo-data:
